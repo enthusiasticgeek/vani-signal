@@ -1,0 +1,77 @@
+// Two small DSP workflows chained together:
+//   1. Smooth a noisy step signal with a 3-tap moving-average FIR filter
+//      (conv_linear).
+//   2. Compare the FFT magnitude spectrum of a short sine burst under a
+//      rectangular window vs a Hann window, showing how windowing reduces
+//      spectral leakage into neighboring bins.
+//
+// Run with:  vanic run examples/filter_and_window_demo.vani
+
+use "../src/lib.vani";
+
+fn main() -> i64 {
+    // ── 1. Moving-average smoothing via convolution ──────────────────────
+    let step: Vec<f64> = vec();
+    push(mut ref step, 0.0); push(mut ref step, 0.0); push(mut ref step, 5.0);
+    push(mut ref step, 1.0); push(mut ref step, 5.0); push(mut ref step, 5.0);
+    push(mut ref step, 5.0); push(mut ref step, 5.0);
+
+    let kernel: Vec<f64> = vec();
+    push(mut ref kernel, 1.0 / 3.0);
+    push(mut ref kernel, 1.0 / 3.0);
+    push(mut ref kernel, 1.0 / 3.0);
+
+    let smoothed: Vec<f64> = conv_linear(ref step, ref kernel);
+
+    print "noisy step signal:";
+    let i: i64 = 0;
+    let ns: i64 = len(ref step) as i64;
+    while i < ns {
+        print step[i];
+        i = i + 1;
+    }
+
+    print "moving-average smoothed (length = len(step)+len(kernel)-1):";
+    let nsm: i64 = len(ref smoothed) as i64;
+    i = 0;
+    while i < nsm {
+        print smoothed[i];
+        i = i + 1;
+    }
+
+    // ── 2. Windowing before FFT reduces spectral leakage ─────────────────
+    let n: i64 = 16;
+    let sample_rate: f64 = 16.0;
+    let pi: f64 = f64_pi();
+    // 3.5 Hz doesn't complete a whole number of cycles in 16 samples at
+    // 16 Hz, so its energy "leaks" into neighboring bins under a
+    // rectangular window -- a Hann window should concentrate it better.
+    let burst: Vec<f64> = vec();
+    i = 0;
+    while i < n {
+        let t: f64 = (i as f64) / sample_rate;
+        push(mut ref burst, sin(2.0 * pi * 3.5 * t));
+        i = i + 1;
+    }
+
+    let rect: Vec<f64> = window_rectangular(n);
+    let hann: Vec<f64> = window_hann(n);
+    let windowed_rect: Vec<f64> = apply_window(ref burst, ref rect);
+    let windowed_hann: Vec<f64> = apply_window(ref burst, ref hann);
+
+    let spec_rect: Vec<Complex> = fft_real(ref windowed_rect);
+    let spec_hann: Vec<Complex> = fft_real(ref windowed_hann);
+    let mag_rect: Vec<f64> = dft_magnitude(ref spec_rect);
+    let mag_hann: Vec<f64> = dft_magnitude(ref spec_hann);
+
+    print "bin : |X| rectangular : |X| hann";
+    i = 0;
+    while i < n / 2 {
+        print i;
+        print mag_rect[i];
+        print mag_hann[i];
+        i = i + 1;
+    }
+
+    return 0;
+}

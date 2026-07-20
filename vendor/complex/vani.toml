@@ -1,0 +1,13 @@
+[package]
+name    = "complex"
+version = "0.1.0"
+entry   = "src/lib.vani"
+authors = "enthusiasticgeek"
+license = "MIT"
+description = "Complex numbers for vāṇी: arithmetic, polar form, exponential/log/power, trigonometric and hyperbolic functions, roots of unity."
+registry = "kosh"
+
+[deps]
+# No external deps — sin, cos, tan, sinh, cosh, tanh, atan2, exp, log, sqrt,
+# abs, f64_pi, f64_hypot are all provided by the vāṇी compiler builtins and
+# must NOT be reimplemented here.

@@ -1,0 +1,66 @@
+// Tests for construction, accessors, and arithmetic.
+// Run with:  vanic test tests/test_arithmetic.vani
+
+use "../src/lib.vani";
+
+fn close(a: f64, b: f64) -> bool {
+    return abs(a - b) < 1.0e-9;
+}
+
+fn main() -> i64 {
+    let a: Complex = complex_new(1.0, 2.0);
+    let b: Complex = complex_new(3.0, 4.0);
+
+    // Addition
+    let s: Complex = complex_add(a, b);
+    assert close(s.re, 4.0);
+    assert close(s.im, 6.0);
+
+    // Subtraction
+    let d: Complex = complex_sub(a, b);
+    assert close(d.re, 0.0 - 2.0);
+    assert close(d.im, 0.0 - 2.0);
+
+    // Multiplication: (1+2i)(3+4i) = 3+4i+6i+8i^2 = 3+10i-8 = -5+10i
+    let m: Complex = complex_mul(a, b);
+    assert close(m.re, 0.0 - 5.0);
+    assert close(m.im, 10.0);
+
+    // (1+i)(1+i) = 2i
+    let ii: Complex = complex_new(1.0, 1.0);
+    let sq: Complex = complex_mul(ii, ii);
+    assert close(sq.re, 0.0);
+    assert close(sq.im, 2.0);
+
+    // Division: (1+i)/(1+i) = 1
+    let div1: Complex = complex_div(ii, ii);
+    assert close(div1.re, 1.0);
+    assert close(div1.im, 0.0);
+
+    // Conjugate
+    let c: Complex = complex_conj(a);
+    assert close(c.re, 1.0);
+    assert close(c.im, 0.0 - 2.0);
+
+    // Negation
+    let n: Complex = complex_neg(a);
+    assert close(n.re, 0.0 - 1.0);
+    assert close(n.im, 0.0 - 2.0);
+
+    // Scale
+    let sc: Complex = complex_scale(a, 2.0);
+    assert close(sc.re, 2.0);
+    assert close(sc.im, 4.0);
+
+    // Reciprocal: z * (1/z) = 1
+    let recip: Complex = complex_reciprocal(b);
+    let one: Complex = complex_mul(b, recip);
+    assert close(one.re, 1.0);
+    assert close(one.im, 0.0);
+
+    // norm_sq(3+4i) = 25
+    let c34: Complex = complex_new(3.0, 4.0);
+    assert close(complex_norm_sq(c34), 25.0);
+
+    return 0;
+}

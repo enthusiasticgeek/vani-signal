@@ -1,0 +1,91 @@
+// Tests for convolution, correlation, and windowing functions.
+// Run with:  vanic test tests/test_convolution_windows.vani
+
+use "../src/lib.vani";
+
+fn close(a: f64, b: f64) -> bool {
+    return abs(a - b) < 1.0e-9;
+}
+
+fn main() -> i64 {
+    // conv_linear([1,2,3],[0,1,0.5]) hand-computed = [0, 1, 2.5, 4, 1.5].
+    let a: Vec<f64> = vec();
+    push(mut ref a, 1.0); push(mut ref a, 2.0); push(mut ref a, 3.0);
+    let b: Vec<f64> = vec();
+    push(mut ref b, 0.0); push(mut ref b, 1.0); push(mut ref b, 0.5);
+    let c: Vec<f64> = conv_linear(ref a, ref b);
+    assert (len(ref c) as i64) == 5;
+    assert close(c[0], 0.0);
+    assert close(c[1], 1.0);
+    assert close(c[2], 2.5);
+    assert close(c[3], 4.0);
+    assert close(c[4], 1.5);
+
+    // conv_circular is linear convolution with wraparound: with a "delta at 0"
+    // kernel, circular convolution is the identity.
+    let delta: Vec<f64> = vec();
+    push(mut ref delta, 1.0); push(mut ref delta, 0.0); push(mut ref delta, 0.0); push(mut ref delta, 0.0);
+    let sig: Vec<f64> = vec();
+    push(mut ref sig, 1.0); push(mut ref sig, 2.0); push(mut ref sig, 3.0); push(mut ref sig, 4.0);
+    let cc: Vec<f64> = conv_circular(ref sig, ref delta);
+    let i: i64 = 0;
+    while i < 4 {
+        assert close(cc[i], sig[i]);
+        i = i + 1;
+    }
+    // conv_circular([1,1,0,0],[1,1,0,0]) hand-computed = [1,2,1,0].
+    let ca: Vec<f64> = vec();
+    push(mut ref ca, 1.0); push(mut ref ca, 1.0); push(mut ref ca, 0.0); push(mut ref ca, 0.0);
+    let cb: Vec<f64> = vec();
+    push(mut ref cb, 1.0); push(mut ref cb, 1.0); push(mut ref cb, 0.0); push(mut ref cb, 0.0);
+    let cconv: Vec<f64> = conv_circular(ref ca, ref cb);
+    assert close(cconv[0], 1.0);
+    assert close(cconv[1], 2.0);
+    assert close(cconv[2], 1.0);
+    assert close(cconv[3], 0.0);
+
+    // correlate([1,2,3], [0,1,0]) with an un-shifted impulse kernel returns a
+    // zero-padded copy of a (autocorrelation-style identity check).
+    let imp: Vec<f64> = vec();
+    push(mut ref imp, 0.0); push(mut ref imp, 1.0); push(mut ref imp, 0.0);
+    let r: Vec<f64> = correlate(ref a, ref imp);
+    assert (len(ref r) as i64) == 5;
+    assert close(r[0], 0.0);
+    assert close(r[1], 1.0);
+    assert close(r[2], 2.0);
+    assert close(r[3], 3.0);
+    assert close(r[4], 0.0);
+
+    // Windows: value 5, n=5 -- endpoints and center for each.
+    let wr: Vec<f64> = window_rectangular(5);
+    i = 0;
+    while i < 5 {
+        assert close(wr[i], 1.0);
+        i = i + 1;
+    }
+
+    let wh: Vec<f64> = window_hann(5);
+    assert close(wh[0], 0.0);
+    assert close(wh[2], 1.0);
+    assert close(wh[4], 0.0);
+
+    let wm: Vec<f64> = window_hamming(5);
+    assert close(wm[0], 0.08);
+    assert close(wm[4], 0.08);
+
+    let wb: Vec<f64> = window_blackman(5);
+    assert close(wb[0], 0.0);
+    assert close(wb[4], 0.0);
+
+    // apply_window: elementwise multiply.
+    let sig2: Vec<f64> = vec();
+    push(mut ref sig2, 2.0); push(mut ref sig2, 2.0); push(mut ref sig2, 2.0);
+    let win2: Vec<f64> = vec();
+    push(mut ref win2, 1.0); push(mut ref win2, 0.5); push(mut ref win2, 0.0);
+    let applied: Vec<f64> = apply_window(ref sig2, ref win2);
+    assert close(applied[0], 2.0);
+    assert close(applied[1], 1.0);
+    assert close(applied[2], 0.0);
+
+    return 0;
+}

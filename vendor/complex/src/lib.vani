@@ -1,0 +1,203 @@
+// vani-complex  v0.1.0 — complex number library
+//
+// ENCODING: Complex is a plain struct { re: f64, im: f64 }. It has no
+// heap-owning fields, so it is Copy (freely passable/reusable by value,
+// no `ref`/`mut ref` ceremony needed anywhere in this API).
+//
+// IMPORTANT — do NOT reimplement vāṇी compiler builtins.
+// Already available as builtins (call directly, never redeclare here):
+//   sin cos tan sinh cosh tanh atan2 exp log sqrt abs
+//   f64_pi()  f64_hypot(x, y)
+//
+// v0.1.0 depends on nothing else in the Kosh ecosystem.
+
+struct Complex { re: f64, im: f64 }
+
+// ── Construction and accessors ───────────────────────────────────────────────
+
+// Construct a complex number from real and imaginary parts.
+#[bounded_stack(bytes = 80)]
+fn complex_new(re: f64, im: f64) -> Complex {
+    return Complex { re: re, im: im };
+}
+
+// Complex conjugate: re - i*im.
+#[bounded_stack(bytes = 96)]
+fn complex_conj(z: Complex) -> Complex {
+    return Complex { re: z.re, im: 0.0 - z.im };
+}
+
+// Negation: -re - i*im.
+#[bounded_stack(bytes = 96)]
+fn complex_neg(z: Complex) -> Complex {
+    return Complex { re: 0.0 - z.re, im: 0.0 - z.im };
+}
+
+// ── Arithmetic ────────────────────────────────────────────────────────────────
+
+// Addition: (a.re+b.re) + i(a.im+b.im).
+#[bounded_stack(bytes = 128)]
+fn complex_add(a: Complex, b: Complex) -> Complex {
+    return Complex { re: a.re + b.re, im: a.im + b.im };
+}
+
+// Subtraction: (a.re-b.re) + i(a.im-b.im).
+#[bounded_stack(bytes = 128)]
+fn complex_sub(a: Complex, b: Complex) -> Complex {
+    return Complex { re: a.re - b.re, im: a.im - b.im };
+}
+
+// Multiplication: (a.re*b.re - a.im*b.im) + i(a.re*b.im + a.im*b.re).
+#[bounded_stack(bytes = 128)]
+fn complex_mul(a: Complex, b: Complex) -> Complex {
+    return Complex { re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re };
+}
+
+// Squared modulus |z|^2 = re^2 + im^2. Cheaper than complex_abs() when only
+// comparing magnitudes (no sqrt).
+#[bounded_stack(bytes = 72)]
+fn complex_norm_sq(z: Complex) -> f64 {
+    return z.re * z.re + z.im * z.im;
+}
+
+// Division a/b via the standard conjugate-multiply identity.
+#[bounded_stack(bytes = 208)]
+fn complex_div(a: Complex, b: Complex) -> Complex {
+    let denom: f64 = complex_norm_sq(b);
+    return Complex {
+        re: (a.re * b.re + a.im * b.im) / denom,
+        im: (a.im * b.re - a.re * b.im) / denom,
+    };
+}
+
+// Scalar multiply: every component of z times s.
+#[bounded_stack(bytes = 104)]
+fn complex_scale(z: Complex, s: f64) -> Complex {
+    return Complex { re: z.re * s, im: z.im * s };
+}
+
+// Multiplicative inverse 1/z = conj(z) / |z|^2.
+#[bounded_stack(bytes = 176)]
+fn complex_reciprocal(z: Complex) -> Complex {
+    let denom: f64 = complex_norm_sq(z);
+    return Complex { re: z.re / denom, im: (0.0 - z.im) / denom };
+}
+
+// ── Modulus, argument, polar form ────────────────────────────────────────────
+
+// Modulus |z| = hypot(re, im) (overflow/underflow-safe, unlike sqrt(re²+im²)
+// directly).
+#[bounded_stack(bytes = 72)]
+fn complex_abs(z: Complex) -> f64 {
+    return f64_hypot(z.re, z.im);
+}
+
+// Argument (phase angle) in radians, range (-π, π], via atan2.
+#[bounded_stack(bytes = 72)]
+fn complex_arg(z: Complex) -> f64 {
+    return atan2(z.im, z.re);
+}
+
+// Construct a complex number from polar form: r × e^(iθ) = r cos θ + i r sin θ.
+#[bounded_stack(bytes = 80)]
+fn complex_from_polar(r: f64, theta: f64) -> Complex {
+    return Complex { re: r * cos(theta), im: r * sin(theta) };
+}
+
+// ── Exponential, logarithm, powers ───────────────────────────────────────────
+
+// Complex exponential: e^z = e^re × (cos(im) + i sin(im)).
+#[bounded_stack(bytes = 104)]
+fn complex_exp(z: Complex) -> Complex {
+    let er: f64 = exp(z.re);
+    return Complex { re: er * cos(z.im), im: er * sin(z.im) };
+}
+
+// Principal complex logarithm: ln|z| + i·arg(z).
+#[bounded_stack(bytes = 168)]
+fn complex_log(z: Complex) -> Complex {
+    return Complex { re: log(complex_abs(z)), im: complex_arg(z) };
+}
+
+// Integer power (positive, negative, or zero) via repeated multiplication.
+// Negative n uses the reciprocal of z first. z^0 = 1 for any z (including 0,
+// matching the usual convention).
+#[bounded_stack(bytes = 440)]
+fn complex_pow_i64(z: Complex, n: i64) -> Complex {
+    let nn: i64 = n;
+    let base: Complex = z;
+    if nn < 0 {
+        base = complex_reciprocal(z);
+        nn = 0 - nn;
+    }
+    let result: Complex = Complex { re: 1.0, im: 0.0 };
+    let i: i64 = 0;
+    while i < nn {
+        result = complex_mul(result, base);
+        i = i + 1;
+    }
+    return result;
+}
+
+// Principal square root, via polar form: sqrt(r) × e^(iθ/2).
+#[bounded_stack(bytes = 192)]
+fn complex_sqrt(z: Complex) -> Complex {
+    let r: f64 = complex_abs(z);
+    let theta: f64 = complex_arg(z);
+    return complex_from_polar(sqrt(r), theta / 2.0);
+}
+
+// ── Trigonometric and hyperbolic functions ───────────────────────────────────
+
+// sin(a+bi) = sin(a)cosh(b) + i cos(a)sinh(b).
+#[bounded_stack(bytes = 96)]
+fn complex_sin(z: Complex) -> Complex {
+    return Complex { re: sin(z.re) * cosh(z.im), im: cos(z.re) * sinh(z.im) };
+}
+
+// cos(a+bi) = cos(a)cosh(b) - i sin(a)sinh(b).
+#[bounded_stack(bytes = 96)]
+fn complex_cos(z: Complex) -> Complex {
+    return Complex { re: cos(z.re) * cosh(z.im), im: (0.0 - sin(z.re)) * sinh(z.im) };
+}
+
+// tan(z) = sin(z) / cos(z).
+#[bounded_stack(bytes = 304)]
+fn complex_tan(z: Complex) -> Complex {
+    return complex_div(complex_sin(z), complex_cos(z));
+}
+
+// sinh(a+bi) = sinh(a)cos(b) + i cosh(a)sin(b).
+#[bounded_stack(bytes = 96)]
+fn complex_sinh(z: Complex) -> Complex {
+    return Complex { re: sinh(z.re) * cos(z.im), im: cosh(z.re) * sin(z.im) };
+}
+
+// cosh(a+bi) = cosh(a)cos(b) + i sinh(a)sin(b).
+#[bounded_stack(bytes = 96)]
+fn complex_cosh(z: Complex) -> Complex {
+    return Complex { re: cosh(z.re) * cos(z.im), im: sinh(z.re) * sin(z.im) };
+}
+
+// tanh(z) = sinh(z) / cosh(z).
+#[bounded_stack(bytes = 304)]
+fn complex_tanh(z: Complex) -> Complex {
+    return complex_div(complex_sinh(z), complex_cosh(z));
+}
+
+// ── Roots of unity ────────────────────────────────────────────────────────────
+
+// The n-th roots of unity: e^(2πik/n) for k = 0..n-1. Returns a Vec<Complex>
+// of length n (index 0 is always exactly 1+0i).
+#[bounded_stack(bytes = 200)]
+fn complex_nth_roots_of_unity(n: i64) -> Vec<Complex> {
+    let out: Vec<Complex> = vec();
+    let pi: f64 = f64_pi();
+    let k: i64 = 0;
+    while k < n {
+        let theta: f64 = 2.0 * pi * (k as f64) / (n as f64);
+        push(mut ref out, complex_from_polar(1.0, theta));
+        k = k + 1;
+    }
+    return out;
+}

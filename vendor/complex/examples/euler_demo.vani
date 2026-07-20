@@ -1,0 +1,52 @@
+// Demo: Euler's identity, roots of unity, and a Mandelbrot-style escape-time
+// check (complex_mul + complex_add + complex_abs, no other library needed).
+//
+// Run with:  vanic run examples/euler_demo.vani
+
+use "../src/lib.vani";
+
+fn main() -> i64 {
+    print "=== Euler's identity: e^(i*pi) + 1 = 0 ===";
+    let ipi: Complex = complex_new(0.0, f64_pi());
+    let euler: Complex = complex_exp(ipi);
+    print "e^(i*pi) =", euler.re, euler.im, " (expect -1, ~0)";
+    let sum: Complex = complex_add(euler, complex_new(1.0, 0.0));
+    print "e^(i*pi) + 1 =", sum.re, sum.im, " (expect ~0, ~0)";
+
+    print "";
+    print "=== The 6th roots of unity ===";
+    let roots: Vec<Complex> = complex_nth_roots_of_unity(6);
+    let i: i64 = 0;
+    while i < 6 {
+        print "root", i, "=", roots[i].re, roots[i].im, " |root| =", complex_abs(roots[i]);
+        i = i + 1;
+    }
+
+    print "";
+    print "=== Mandelbrot escape-time check: does z stay bounded under z -> z^2 + c? ===";
+    print "(c inside the Mandelbrot set stays bounded; c outside diverges past |z|=2)";
+    let cs: Vec<Complex> = vec(complex_new(0.0 - 1.0, 0.0));
+    push(mut ref cs, complex_new(0.25, 0.5));
+    push(mut ref cs, complex_new(2.0, 0.5));
+
+    let ci: i64 = 0;
+    while ci < 3 {
+        let c: Complex = cs[ci];
+        let z: Complex = complex_new(0.0, 0.0);
+        let iter: i64 = 0;
+        let escaped: bool = false;
+        while iter < 50 {
+            z = complex_add(complex_mul(z, z), c);
+            if complex_abs(z) > 2.0 {
+                escaped = true;
+                iter = 50;
+            } else {
+                iter = iter + 1;
+            }
+        }
+        print "c =", c.re, c.im, " escaped:", escaped;
+        ci = ci + 1;
+    }
+
+    return 0;
+}
