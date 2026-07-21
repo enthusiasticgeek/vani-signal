@@ -11,8 +11,8 @@
 // ENCODING: time/sample-domain data is `Vec<f64>`; frequency-domain data is
 // `Vec<Complex>`, matching vani-complex's plain-struct convention (Complex has
 // no heap-owning fields, so it's Copy and needs no ref/mut ref ceremony as a
-// value, only Vec<Complex> arguments use ref/mut ref).
-use "../vendor/complex/src/lib.vani";
+// value, only Vec<Complex> arguments use ref/mut ref). No `use` statement
+// needed: vanic auto-includes every [deps] entry's source before compiling.
 
 // ── Discrete Fourier Transform (naive, any length) ───────────────────────────
 
