@@ -13,6 +13,17 @@
 // no heap-owning fields, so it's Copy and needs no ref/mut ref ceremony as a
 // value, only Vec<Complex> arguments use ref/mut ref). No `use` statement
 // needed: vanic auto-includes every [deps] entry's source before compiling.
+//
+// WCET (MAINT-1, added 2026-07-21 -- see kosh-index/ROADMAP.md): no
+// function in this package gets a #[wcet(cycles=N)] attribute -- every one
+// loops over a sample count, a runtime parameter, unbounded under `vanic
+// check`'s WCET model (including fft/ifft/fft_real, which are additionally
+// recursive: #[bounded(16)] caps the recursion depth, but each call's own
+// O(n) merge step is still runtime-sized, so the combination doesn't
+// resolve to a number either). Several functions already documented their
+// own Big-O in the existing doc comment above (dft/idft as O(n^2), fft's
+// recursion depth) -- not repeated redundantly below; only functions
+// without an existing complexity note get one added here.
 
 // ── Discrete Fourier Transform (naive, any length) ───────────────────────────
 
@@ -118,7 +129,7 @@ fn fft(x: ref Vec<Complex>) -> Vec<Complex> {
     return out;
 }
 
-// Private helper: elementwise conjugate of a Vec<Complex>.
+// Private helper: elementwise conjugate of a Vec<Complex>. O(n).
 #[bounded_stack(bytes = 208)]
 fn _conj_vec(x: ref Vec<Complex>) -> Vec<Complex> {
     let n: i64 = len(x) as i64;
@@ -133,7 +144,7 @@ fn _conj_vec(x: ref Vec<Complex>) -> Vec<Complex> {
 
 // Inverse FFT via the conjugate trick: ifft(X) = (1/N) * conj(fft(conj(X))).
 // Avoids a second recursive implementation; same power-of-2 length
-// requirement as fft().
+// requirement as fft(). O(n log n), same as fft() itself.
 #[bounded_stack(bytes = 8072)]
 fn ifft(xf: ref Vec<Complex>) -> Vec<Complex> {
     let n: i64 = len(xf) as i64;
@@ -150,7 +161,8 @@ fn ifft(xf: ref Vec<Complex>) -> Vec<Complex> {
 }
 
 // Convenience wrapper: lift a real-valued Vec<f64> to Vec<Complex> (im = 0)
-// and run fft(). Same power-of-2 length requirement.
+// and run fft(). Same power-of-2 length requirement. O(n) lift + fft()'s
+// O(n log n) -- O(n log n) overall.
 #[bounded_stack(bytes = 8000)]
 fn fft_real(x: ref Vec<f64>) -> Vec<Complex> {
     let n: i64 = len(x) as i64;
@@ -165,7 +177,7 @@ fn fft_real(x: ref Vec<f64>) -> Vec<Complex> {
 
 // ── Spectrum helpers ──────────────────────────────────────────────────────────
 
-// Magnitude spectrum |X[k]| for every bin.
+// Magnitude spectrum |X[k]| for every bin. O(n).
 #[bounded_stack(bytes = 184)]
 fn dft_magnitude(xf: ref Vec<Complex>) -> Vec<f64> {
     let n: i64 = len(xf) as i64;
@@ -180,6 +192,7 @@ fn dft_magnitude(xf: ref Vec<Complex>) -> Vec<f64> {
 
 // Power spectrum |X[k]|^2 for every bin. Cheaper than squaring dft_magnitude
 // (no sqrt), same relationship as vani-complex's complex_norm_sq vs complex_abs.
+// O(n).
 #[bounded_stack(bytes = 184)]
 fn dft_power(xf: ref Vec<Complex>) -> Vec<f64> {
     let n: i64 = len(xf) as i64;
@@ -194,7 +207,7 @@ fn dft_power(xf: ref Vec<Complex>) -> Vec<f64> {
 
 // Frequency (Hz) of each DFT/FFT bin for a length-n transform sampled at
 // sample_rate, following the standard fftfreq convention: bins past n/2
-// represent negative frequencies (wrap around).
+// represent negative frequencies (wrap around). O(n).
 #[bounded_stack(bytes = 120)]
 fn fft_freq(n: i64, sample_rate: f64) -> Vec<f64> {
     let half: i64 = n / 2;
@@ -213,7 +226,7 @@ fn fft_freq(n: i64, sample_rate: f64) -> Vec<f64> {
 
 // ── Padding utilities (prepare input for fft()) ──────────────────────────────
 
-// Smallest power of 2 that is >= n.
+// Smallest power of 2 that is >= n. O(log n).
 #[bounded_stack(bytes = 64)]
 fn next_power_of_two(n: i64) -> i64 {
     let p: i64 = 1;
@@ -224,7 +237,7 @@ fn next_power_of_two(n: i64) -> i64 {
 }
 
 // Right-pad a real-valued vector with zeros to target_len (no-op on the
-// already-present elements; target_len must be >= len(x)).
+// already-present elements; target_len must be >= len(x)). O(target_len).
 #[bounded_stack(bytes = 128)]
 fn zero_pad(x: ref Vec<f64>, target_len: i64) -> Vec<f64> {
     let n: i64 = len(x) as i64;
@@ -242,6 +255,7 @@ fn zero_pad(x: ref Vec<f64>, target_len: i64) -> Vec<f64> {
 }
 
 // Right-pad a complex-valued vector with 0+0i to target_len.
+// O(target_len).
 #[bounded_stack(bytes = 208)]
 fn zero_pad_complex(x: ref Vec<Complex>, target_len: i64) -> Vec<Complex> {
     let n: i64 = len(x) as i64;
@@ -261,6 +275,7 @@ fn zero_pad_complex(x: ref Vec<Complex>, target_len: i64) -> Vec<Complex> {
 // ── Convolution and correlation ──────────────────────────────────────────────
 
 // Linear (full) convolution: c[n] = sum_k a[k]*b[n-k], length len(a)+len(b)-1.
+// O(len(a) * len(b)) -- the naive/direct convolution, not FFT-accelerated.
 #[bounded_stack(bytes = 176)]
 fn conv_linear(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
     let na: i64 = len(a) as i64;
@@ -287,7 +302,7 @@ fn conv_linear(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
 }
 
 // Circular convolution of two equal-length vectors (length n, indices wrap
-// mod n): c[m] = sum_k a[k]*b[(m-k) mod n].
+// mod n): c[m] = sum_k a[k]*b[(m-k) mod n]. O(n^2), naive/direct.
 #[bounded_stack(bytes = 168)]
 fn conv_circular(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
     let n: i64 = len(a) as i64;
@@ -310,7 +325,7 @@ fn conv_circular(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
     return out;
 }
 
-// Private helper: reverse a Vec<f64>.
+// Private helper: reverse a Vec<f64>. O(n).
 #[bounded_stack(bytes = 112)]
 fn _reverse_f64(x: ref Vec<f64>) -> Vec<f64> {
     let n: i64 = len(x) as i64;
@@ -324,7 +339,8 @@ fn _reverse_f64(x: ref Vec<f64>) -> Vec<f64> {
 }
 
 // Cross-correlation via conv_linear(a, reverse(b)) -- the standard identity
-// relating correlation and convolution.
+// relating correlation and convolution. O(len(a) * len(b)), same as
+// conv_linear.
 #[bounded_stack(bytes = 272)]
 fn correlate(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
     let rb: Vec<f64> = _reverse_f64(b);
@@ -334,7 +350,7 @@ fn correlate(a: ref Vec<f64>, b: ref Vec<f64>) -> Vec<f64> {
 // ── Windowing functions ───────────────────────────────────────────────────────
 
 // Rectangular window: all ones. Included for API completeness (the no-op
-// baseline every other window is compared against).
+// baseline every other window is compared against). O(n).
 #[bounded_stack(bytes = 104)]
 fn window_rectangular(n: i64) -> Vec<f64> {
     let out: Vec<f64> = vec();
@@ -346,7 +362,7 @@ fn window_rectangular(n: i64) -> Vec<f64> {
     return out;
 }
 
-// Hann window: 0.5*(1 - cos(2*pi*i/(n-1))).
+// Hann window: 0.5*(1 - cos(2*pi*i/(n-1))). O(n).
 #[bounded_stack(bytes = 128)]
 fn window_hann(n: i64) -> Vec<f64> {
     let out: Vec<f64> = vec();
@@ -361,7 +377,7 @@ fn window_hann(n: i64) -> Vec<f64> {
     return out;
 }
 
-// Hamming window: 0.54 - 0.46*cos(2*pi*i/(n-1)).
+// Hamming window: 0.54 - 0.46*cos(2*pi*i/(n-1)). O(n).
 #[bounded_stack(bytes = 128)]
 fn window_hamming(n: i64) -> Vec<f64> {
     let out: Vec<f64> = vec();
@@ -377,6 +393,7 @@ fn window_hamming(n: i64) -> Vec<f64> {
 }
 
 // Blackman window: 0.42 - 0.5*cos(2*pi*i/(n-1)) + 0.08*cos(4*pi*i/(n-1)).
+// O(n).
 #[bounded_stack(bytes = 136)]
 fn window_blackman(n: i64) -> Vec<f64> {
     let out: Vec<f64> = vec();
@@ -392,7 +409,7 @@ fn window_blackman(n: i64) -> Vec<f64> {
     return out;
 }
 
-// Elementwise multiply a signal by a window (same length assumed).
+// Elementwise multiply a signal by a window (same length assumed). O(n).
 #[bounded_stack(bytes = 120)]
 fn apply_window(x: ref Vec<f64>, w: ref Vec<f64>) -> Vec<f64> {
     let n: i64 = len(x) as i64;
@@ -411,6 +428,7 @@ fn apply_window(x: ref Vec<f64>, w: ref Vec<f64>) -> Vec<f64> {
 // integral from t[0] to t[n-1] of x(t)*e^(-s*t) dt. t need not be uniformly
 // spaced. Accuracy depends on sample density and how much of the true
 // integral (0 to infinity) the sampled range [t[0], t[n-1]] actually covers.
+// O(n).
 #[bounded_stack(bytes = 528)]
 fn laplace_transform_numeric(t: ref Vec<f64>, x: ref Vec<f64>, s: Complex) -> Complex {
     let n: i64 = len(t) as i64;
@@ -432,7 +450,9 @@ fn laplace_transform_numeric(t: ref Vec<f64>, x: ref Vec<f64>, s: Complex) -> Co
 
 // Numeric Z-transform of a finite causal sequence x[0..n-1], evaluated at a
 // point z: X(z) = sum_n x[n] * z^(-n). Evaluating on the unit circle
-// (|z| = 1) gives the same values as dft()/fft() on x.
+// (|z| = 1) gives the same values as dft()/fft() on x. O(n^2): each of
+// the n terms calls vani-complex's complex_pow_i64(z, -i), itself O(i) --
+// not just O(n) despite the single visible loop here.
 #[bounded_stack(bytes = 664)]
 fn z_transform_numeric(x: ref Vec<f64>, z: Complex) -> Complex {
     let n: i64 = len(x) as i64;
