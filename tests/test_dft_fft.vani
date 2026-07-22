@@ -9,12 +9,12 @@ fn close(a: f64, b: f64) -> bool {
 
 fn main() -> i64 {
     // dft([1,1,1,1]) = [4, 0, 0, 0] (DC-only signal).
-    let ones: Vec<Complex> = vec();
-    push(mut ref ones, complex_new(1.0, 0.0));
-    push(mut ref ones, complex_new(1.0, 0.0));
-    push(mut ref ones, complex_new(1.0, 0.0));
-    push(mut ref ones, complex_new(1.0, 0.0));
-    let d1: Vec<Complex> = dft(ref ones);
+    let ones: Vec<complex::Complex> = vec();
+    push(mut ref ones, complex::complex_new(1.0, 0.0));
+    push(mut ref ones, complex::complex_new(1.0, 0.0));
+    push(mut ref ones, complex::complex_new(1.0, 0.0));
+    push(mut ref ones, complex::complex_new(1.0, 0.0));
+    let d1: Vec<complex::Complex> = dft(ref ones);
     assert close(d1[0].re, 4.0);
     assert close(d1[0].im, 0.0);
     assert close(d1[1].re, 0.0);
@@ -22,12 +22,12 @@ fn main() -> i64 {
     assert close(d1[3].re, 0.0);
 
     // dft([1,2,3,4]) has the textbook closed form [10, -2+2i, -2, -2-2i].
-    let x: Vec<Complex> = vec();
-    push(mut ref x, complex_new(1.0, 0.0));
-    push(mut ref x, complex_new(2.0, 0.0));
-    push(mut ref x, complex_new(3.0, 0.0));
-    push(mut ref x, complex_new(4.0, 0.0));
-    let d2: Vec<Complex> = dft(ref x);
+    let x: Vec<complex::Complex> = vec();
+    push(mut ref x, complex::complex_new(1.0, 0.0));
+    push(mut ref x, complex::complex_new(2.0, 0.0));
+    push(mut ref x, complex::complex_new(3.0, 0.0));
+    push(mut ref x, complex::complex_new(4.0, 0.0));
+    let d2: Vec<complex::Complex> = dft(ref x);
     assert close(d2[0].re, 10.0);
     assert close(d2[0].im, 0.0);
     assert close(d2[1].re, 0.0 - 2.0);
@@ -38,7 +38,7 @@ fn main() -> i64 {
     assert close(d2[3].im, 0.0 - 2.0);
 
     // fft must agree with dft on the same input (fast path vs reference path).
-    let d2_fft: Vec<Complex> = fft(ref x);
+    let d2_fft: Vec<complex::Complex> = fft(ref x);
     let i: i64 = 0;
     while i < 4 {
         assert close(d2_fft[i].re, d2[i].re);
@@ -47,7 +47,7 @@ fn main() -> i64 {
     }
 
     // idft(dft(x)) round-trips to x.
-    let back: Vec<Complex> = idft(ref d2);
+    let back: Vec<complex::Complex> = idft(ref d2);
     i = 0;
     while i < 4 {
         assert close(back[i].re, x[i].re);
@@ -56,7 +56,7 @@ fn main() -> i64 {
     }
 
     // ifft(fft(x)) round-trips to x too (via the conjugate-trick inverse).
-    let back2: Vec<Complex> = ifft(ref d2_fft);
+    let back2: Vec<complex::Complex> = ifft(ref d2_fft);
     i = 0;
     while i < 4 {
         assert close(back2[i].re, x[i].re);
@@ -64,10 +64,10 @@ fn main() -> i64 {
         i = i + 1;
     }
 
-    // fft_real([1,2,3,4]) must equal fft of the same values lifted to Complex.
+    // fft_real([1,2,3,4]) must equal fft of the same values lifted to complex::Complex.
     let xr: Vec<f64> = vec();
     push(mut ref xr, 1.0); push(mut ref xr, 2.0); push(mut ref xr, 3.0); push(mut ref xr, 4.0);
-    let d2_real: Vec<Complex> = fft_real(ref xr);
+    let d2_real: Vec<complex::Complex> = fft_real(ref xr);
     i = 0;
     while i < 4 {
         assert close(d2_real[i].re, d2[i].re);
@@ -107,14 +107,14 @@ fn main() -> i64 {
     assert close(padded[3], 0.0);
     assert close(padded[4], 0.0);
     let padded_pow2: Vec<f64> = zero_pad(ref short, next_power_of_two(3));
-    let spec: Vec<Complex> = fft_real(ref padded_pow2);
+    let spec: Vec<complex::Complex> = fft_real(ref padded_pow2);
     assert (len(ref spec) as i64) == 4;
 
-    // zero_pad_complex mirrors zero_pad for Vec<Complex>.
-    let cshort: Vec<Complex> = vec();
-    push(mut ref cshort, complex_new(1.0, 0.0));
-    push(mut ref cshort, complex_new(2.0, 0.0));
-    let cpadded: Vec<Complex> = zero_pad_complex(ref cshort, 4);
+    // zero_pad_complex mirrors zero_pad for Vec<complex::Complex>.
+    let cshort: Vec<complex::Complex> = vec();
+    push(mut ref cshort, complex::complex_new(1.0, 0.0));
+    push(mut ref cshort, complex::complex_new(2.0, 0.0));
+    let cpadded: Vec<complex::Complex> = zero_pad_complex(ref cshort, 4);
     assert close(cpadded[0].re, 1.0);
     assert close(cpadded[1].re, 2.0);
     assert close(cpadded[2].re, 0.0);

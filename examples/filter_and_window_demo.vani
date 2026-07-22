@@ -59,8 +59,8 @@ fn main() -> i64 {
     let windowed_rect: Vec<f64> = apply_window(ref burst, ref rect);
     let windowed_hann: Vec<f64> = apply_window(ref burst, ref hann);
 
-    let spec_rect: Vec<Complex> = fft_real(ref windowed_rect);
-    let spec_hann: Vec<Complex> = fft_real(ref windowed_hann);
+    let spec_rect: Vec<complex::Complex> = fft_real(ref windowed_rect);
+    let spec_hann: Vec<complex::Complex> = fft_real(ref windowed_hann);
     let mag_rect: Vec<f64> = dft_magnitude(ref spec_rect);
     let mag_hann: Vec<f64> = dft_magnitude(ref spec_hann);
 

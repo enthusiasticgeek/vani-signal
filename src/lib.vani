@@ -5,13 +5,13 @@
 //   sin cos tan exp log sqrt abs atan2  f64_pi()  f64_hypot(x, y)
 //   push pop len set vec
 //
-// Depends on vani-complex (Complex, complex_* arithmetic/polar/exp) for every
+// Depends on vani-complex (complex::Complex, complex_* arithmetic/polar/exp) for every
 // frequency-domain function -- see [deps] in vani.toml.
 //
 // ENCODING: time/sample-domain data is `Vec<f64>`; frequency-domain data is
-// `Vec<Complex>`, matching vani-complex's plain-struct convention (Complex has
+// `Vec<complex::Complex>`, matching vani-complex's plain-struct convention (complex::Complex has
 // no heap-owning fields, so it's Copy and needs no ref/mut ref ceremony as a
-// value, only Vec<Complex> arguments use ref/mut ref). No `use` statement
+// value, only Vec<complex::Complex> arguments use ref/mut ref). No `use` statement
 // needed: vanic auto-includes every [deps] entry's source before compiling.
 //
 // WCET (MAINT-1, added 2026-07-21 -- see kosh-index/ROADMAP.md): no
@@ -31,18 +31,18 @@
 // O(n^2) -- works for any length, unlike fft() which requires a power of 2.
 // Use as a reference implementation / fallback for lengths fft() can't take.
 #[bounded_stack(bytes = 368)]
-fn dft(x: ref Vec<Complex>) -> Vec<Complex> {
+fn dft(x: ref Vec<complex::Complex>) -> Vec<complex::Complex> {
     let n: i64 = len(x) as i64;
     let pi: f64 = f64_pi();
-    let out: Vec<Complex> = vec();
+    let out: Vec<complex::Complex> = vec();
     let k: i64 = 0;
     while k < n {
-        let acc: Complex = complex_new(0.0, 0.0);
+        let acc: complex::Complex = complex::complex_new(0.0, 0.0);
         let j: i64 = 0;
         while j < n {
             let angle: f64 = (0.0 - 2.0) * pi * (k as f64) * (j as f64) / (n as f64);
-            let tw: Complex = complex_from_polar(1.0, angle);
-            acc = complex_add(acc, complex_mul(tw, x[j]));
+            let tw: complex::Complex = complex::complex_from_polar(1.0, angle);
+            acc = complex::complex_add(acc, complex::complex_mul(tw, x[j]));
             j = j + 1;
         }
         push(mut ref out, acc);
@@ -54,21 +54,21 @@ fn dft(x: ref Vec<Complex>) -> Vec<Complex> {
 // Inverse DFT via direct summation: x[n] = (1/N) sum_k X[k] * e^(+2pi i k n / N).
 // O(n^2), any length. Pairs with dft().
 #[bounded_stack(bytes = 368)]
-fn idft(xf: ref Vec<Complex>) -> Vec<Complex> {
+fn idft(xf: ref Vec<complex::Complex>) -> Vec<complex::Complex> {
     let n: i64 = len(xf) as i64;
     let pi: f64 = f64_pi();
-    let out: Vec<Complex> = vec();
+    let out: Vec<complex::Complex> = vec();
     let k: i64 = 0;
     while k < n {
-        let acc: Complex = complex_new(0.0, 0.0);
+        let acc: complex::Complex = complex::complex_new(0.0, 0.0);
         let j: i64 = 0;
         while j < n {
             let angle: f64 = 2.0 * pi * (k as f64) * (j as f64) / (n as f64);
-            let tw: Complex = complex_from_polar(1.0, angle);
-            acc = complex_add(acc, complex_mul(tw, xf[j]));
+            let tw: complex::Complex = complex::complex_from_polar(1.0, angle);
+            acc = complex::complex_add(acc, complex::complex_mul(tw, xf[j]));
             j = j + 1;
         }
-        push(mut ref out, complex_scale(acc, 1.0 / (n as f64)));
+        push(mut ref out, complex::complex_scale(acc, 1.0 / (n as f64)));
         k = k + 1;
     }
     return out;
@@ -83,10 +83,10 @@ fn idft(xf: ref Vec<Complex>) -> Vec<Complex> {
 // library's "modest input sizes" scope (see vani-geometry's TODO.md note).
 #[bounded(16)]
 #[bounded_stack(bytes = 7888)]
-fn fft(x: ref Vec<Complex>) -> Vec<Complex> {
+fn fft(x: ref Vec<complex::Complex>) -> Vec<complex::Complex> {
     let n: i64 = len(x) as i64;
     if n <= 1 {
-        let base_out: Vec<Complex> = vec();
+        let base_out: Vec<complex::Complex> = vec();
         let bi: i64 = 0;
         while bi < n {
             push(mut ref base_out, x[bi]);
@@ -94,8 +94,8 @@ fn fft(x: ref Vec<Complex>) -> Vec<Complex> {
         }
         return base_out;
     }
-    let even: Vec<Complex> = vec();
-    let odd: Vec<Complex> = vec();
+    let even: Vec<complex::Complex> = vec();
+    let odd: Vec<complex::Complex> = vec();
     let i: i64 = 0;
     while i < n {
         if i % 2 == 0 {
@@ -105,38 +105,38 @@ fn fft(x: ref Vec<Complex>) -> Vec<Complex> {
         }
         i = i + 1;
     }
-    let fe: Vec<Complex> = fft(ref even);
-    let fo: Vec<Complex> = fft(ref odd);
-    let out: Vec<Complex> = vec();
+    let fe: Vec<complex::Complex> = fft(ref even);
+    let fo: Vec<complex::Complex> = fft(ref odd);
+    let out: Vec<complex::Complex> = vec();
     let half: i64 = n / 2;
     let pi: f64 = f64_pi();
     let k: i64 = 0;
     while k < half {
         let angle: f64 = (0.0 - 2.0) * pi * (k as f64) / (n as f64);
-        let tw: Complex = complex_from_polar(1.0, angle);
-        let t: Complex = complex_mul(tw, fo[k]);
-        push(mut ref out, complex_add(fe[k], t));
+        let tw: complex::Complex = complex::complex_from_polar(1.0, angle);
+        let t: complex::Complex = complex::complex_mul(tw, fo[k]);
+        push(mut ref out, complex::complex_add(fe[k], t));
         k = k + 1;
     }
     k = 0;
     while k < half {
         let angle: f64 = (0.0 - 2.0) * pi * (k as f64) / (n as f64);
-        let tw: Complex = complex_from_polar(1.0, angle);
-        let t: Complex = complex_mul(tw, fo[k]);
-        push(mut ref out, complex_sub(fe[k], t));
+        let tw: complex::Complex = complex::complex_from_polar(1.0, angle);
+        let t: complex::Complex = complex::complex_mul(tw, fo[k]);
+        push(mut ref out, complex::complex_sub(fe[k], t));
         k = k + 1;
     }
     return out;
 }
 
-// Private helper: elementwise conjugate of a Vec<Complex>. O(n).
+// Private helper: elementwise conjugate of a Vec<complex::Complex>. O(n).
 #[bounded_stack(bytes = 208)]
-fn _conj_vec(x: ref Vec<Complex>) -> Vec<Complex> {
+fn _conj_vec(x: ref Vec<complex::Complex>) -> Vec<complex::Complex> {
     let n: i64 = len(x) as i64;
-    let out: Vec<Complex> = vec();
+    let out: Vec<complex::Complex> = vec();
     let i: i64 = 0;
     while i < n {
-        push(mut ref out, complex_conj(x[i]));
+        push(mut ref out, complex::complex_conj(x[i]));
         i = i + 1;
     }
     return out;
@@ -146,30 +146,30 @@ fn _conj_vec(x: ref Vec<Complex>) -> Vec<Complex> {
 // Avoids a second recursive implementation; same power-of-2 length
 // requirement as fft(). O(n log n), same as fft() itself.
 #[bounded_stack(bytes = 8072)]
-fn ifft(xf: ref Vec<Complex>) -> Vec<Complex> {
+fn ifft(xf: ref Vec<complex::Complex>) -> Vec<complex::Complex> {
     let n: i64 = len(xf) as i64;
-    let conj_in: Vec<Complex> = _conj_vec(xf);
-    let stepped: Vec<Complex> = fft(ref conj_in);
-    let conj_out: Vec<Complex> = _conj_vec(ref stepped);
-    let out: Vec<Complex> = vec();
+    let conj_in: Vec<complex::Complex> = _conj_vec(xf);
+    let stepped: Vec<complex::Complex> = fft(ref conj_in);
+    let conj_out: Vec<complex::Complex> = _conj_vec(ref stepped);
+    let out: Vec<complex::Complex> = vec();
     let i: i64 = 0;
     while i < n {
-        push(mut ref out, complex_scale(conj_out[i], 1.0 / (n as f64)));
+        push(mut ref out, complex::complex_scale(conj_out[i], 1.0 / (n as f64)));
         i = i + 1;
     }
     return out;
 }
 
-// Convenience wrapper: lift a real-valued Vec<f64> to Vec<Complex> (im = 0)
+// Convenience wrapper: lift a real-valued Vec<f64> to Vec<complex::Complex> (im = 0)
 // and run fft(). Same power-of-2 length requirement. O(n) lift + fft()'s
 // O(n log n) -- O(n log n) overall.
 #[bounded_stack(bytes = 8000)]
-fn fft_real(x: ref Vec<f64>) -> Vec<Complex> {
+fn fft_real(x: ref Vec<f64>) -> Vec<complex::Complex> {
     let n: i64 = len(x) as i64;
-    let cx: Vec<Complex> = vec();
+    let cx: Vec<complex::Complex> = vec();
     let i: i64 = 0;
     while i < n {
-        push(mut ref cx, complex_new(x[i], 0.0));
+        push(mut ref cx, complex::complex_new(x[i], 0.0));
         i = i + 1;
     }
     return fft(ref cx);
@@ -179,12 +179,12 @@ fn fft_real(x: ref Vec<f64>) -> Vec<Complex> {
 
 // Magnitude spectrum |X[k]| for every bin. O(n).
 #[bounded_stack(bytes = 184)]
-fn dft_magnitude(xf: ref Vec<Complex>) -> Vec<f64> {
+fn dft_magnitude(xf: ref Vec<complex::Complex>) -> Vec<f64> {
     let n: i64 = len(xf) as i64;
     let out: Vec<f64> = vec();
     let i: i64 = 0;
     while i < n {
-        push(mut ref out, complex_abs(xf[i]));
+        push(mut ref out, complex::complex_abs(xf[i]));
         i = i + 1;
     }
     return out;
@@ -194,12 +194,12 @@ fn dft_magnitude(xf: ref Vec<Complex>) -> Vec<f64> {
 // (no sqrt), same relationship as vani-complex's complex_norm_sq vs complex_abs.
 // O(n).
 #[bounded_stack(bytes = 184)]
-fn dft_power(xf: ref Vec<Complex>) -> Vec<f64> {
+fn dft_power(xf: ref Vec<complex::Complex>) -> Vec<f64> {
     let n: i64 = len(xf) as i64;
     let out: Vec<f64> = vec();
     let i: i64 = 0;
     while i < n {
-        push(mut ref out, complex_norm_sq(xf[i]));
+        push(mut ref out, complex::complex_norm_sq(xf[i]));
         i = i + 1;
     }
     return out;
@@ -257,16 +257,16 @@ fn zero_pad(x: ref Vec<f64>, target_len: i64) -> Vec<f64> {
 // Right-pad a complex-valued vector with 0+0i to target_len.
 // O(target_len).
 #[bounded_stack(bytes = 208)]
-fn zero_pad_complex(x: ref Vec<Complex>, target_len: i64) -> Vec<Complex> {
+fn zero_pad_complex(x: ref Vec<complex::Complex>, target_len: i64) -> Vec<complex::Complex> {
     let n: i64 = len(x) as i64;
-    let out: Vec<Complex> = vec();
+    let out: Vec<complex::Complex> = vec();
     let i: i64 = 0;
     while i < n {
         push(mut ref out, x[i]);
         i = i + 1;
     }
     while i < target_len {
-        push(mut ref out, complex_new(0.0, 0.0));
+        push(mut ref out, complex::complex_new(0.0, 0.0));
         i = i + 1;
     }
     return out;
@@ -430,19 +430,19 @@ fn apply_window(x: ref Vec<f64>, w: ref Vec<f64>) -> Vec<f64> {
 // integral (0 to infinity) the sampled range [t[0], t[n-1]] actually covers.
 // O(n).
 #[bounded_stack(bytes = 528)]
-fn laplace_transform_numeric(t: ref Vec<f64>, x: ref Vec<f64>, s: Complex) -> Complex {
+fn laplace_transform_numeric(t: ref Vec<f64>, x: ref Vec<f64>, s: complex::Complex) -> complex::Complex {
     let n: i64 = len(t) as i64;
-    let acc: Complex = complex_new(0.0, 0.0);
-    let neg_s: Complex = complex_neg(s);
+    let acc: complex::Complex = complex::complex_new(0.0, 0.0);
+    let neg_s: complex::Complex = complex::complex_neg(s);
     let i: i64 = 0;
     while i < n - 1 {
         let dt: f64 = t[i + 1] - t[i];
-        let e0: Complex = complex_exp(complex_scale(neg_s, t[i]));
-        let e1: Complex = complex_exp(complex_scale(neg_s, t[i + 1]));
-        let f0: Complex = complex_scale(e0, x[i]);
-        let f1: Complex = complex_scale(e1, x[i + 1]);
-        let trap: Complex = complex_scale(complex_add(f0, f1), dt / 2.0);
-        acc = complex_add(acc, trap);
+        let e0: complex::Complex = complex::complex_exp(complex::complex_scale(neg_s, t[i]));
+        let e1: complex::Complex = complex::complex_exp(complex::complex_scale(neg_s, t[i + 1]));
+        let f0: complex::Complex = complex::complex_scale(e0, x[i]);
+        let f1: complex::Complex = complex::complex_scale(e1, x[i + 1]);
+        let trap: complex::Complex = complex::complex_scale(complex::complex_add(f0, f1), dt / 2.0);
+        acc = complex::complex_add(acc, trap);
         i = i + 1;
     }
     return acc;
@@ -451,16 +451,16 @@ fn laplace_transform_numeric(t: ref Vec<f64>, x: ref Vec<f64>, s: Complex) -> Co
 // Numeric Z-transform of a finite causal sequence x[0..n-1], evaluated at a
 // point z: X(z) = sum_n x[n] * z^(-n). Evaluating on the unit circle
 // (|z| = 1) gives the same values as dft()/fft() on x. O(n^2): each of
-// the n terms calls vani-complex's complex_pow_i64(z, -i), itself O(i) --
+// the n terms calls vani-complex's complex::complex_pow_i64(z, -i), itself O(i) --
 // not just O(n) despite the single visible loop here.
 #[bounded_stack(bytes = 664)]
-fn z_transform_numeric(x: ref Vec<f64>, z: Complex) -> Complex {
+fn z_transform_numeric(x: ref Vec<f64>, z: complex::Complex) -> complex::Complex {
     let n: i64 = len(x) as i64;
-    let acc: Complex = complex_new(0.0, 0.0);
+    let acc: complex::Complex = complex::complex_new(0.0, 0.0);
     let i: i64 = 0;
     while i < n {
-        let zp: Complex = complex_pow_i64(z, 0 - i);
-        acc = complex_add(acc, complex_scale(zp, x[i]));
+        let zp: complex::Complex = complex::complex_pow_i64(z, 0 - i);
+        acc = complex::complex_add(acc, complex::complex_scale(zp, x[i]));
         i = i + 1;
     }
     return acc;

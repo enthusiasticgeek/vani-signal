@@ -22,7 +22,7 @@ fn main() -> i64 {
 
     // n is already a power of two (32), so fft_real applies directly --
     // otherwise next_power_of_two()/zero_pad() would prepare it first.
-    let spectrum: Vec<Complex> = fft_real(ref signal);
+    let spectrum: Vec<complex::Complex> = fft_real(ref signal);
     let mag: Vec<f64> = dft_magnitude(ref spectrum);
     let freqs: Vec<f64> = fft_freq(n, sample_rate);
 

@@ -15,8 +15,8 @@ fn main() -> i64 {
     // z_transform_numeric([1,1,1,1], z=2) = 1 + 0.5 + 0.25 + 0.125 = 1.875.
     let ones: Vec<f64> = vec();
     push(mut ref ones, 1.0); push(mut ref ones, 1.0); push(mut ref ones, 1.0); push(mut ref ones, 1.0);
-    let z: Complex = complex_new(2.0, 0.0);
-    let zres: Complex = z_transform_numeric(ref ones, z);
+    let z: complex::Complex = complex::complex_new(2.0, 0.0);
+    let zres: complex::Complex = z_transform_numeric(ref ones, z);
     assert close(zres.re, 1.875);
     assert close(zres.im, 0.0);
 
@@ -24,19 +24,19 @@ fn main() -> i64 {
     // angle 2*pi*k/n must equal dft(x)[k], for every bin k.
     let x: Vec<f64> = vec();
     push(mut ref x, 1.0); push(mut ref x, 2.0); push(mut ref x, 3.0); push(mut ref x, 4.0);
-    let xc: Vec<Complex> = vec();
-    push(mut ref xc, complex_new(1.0, 0.0));
-    push(mut ref xc, complex_new(2.0, 0.0));
-    push(mut ref xc, complex_new(3.0, 0.0));
-    push(mut ref xc, complex_new(4.0, 0.0));
-    let spectrum: Vec<Complex> = dft(ref xc);
+    let xc: Vec<complex::Complex> = vec();
+    push(mut ref xc, complex::complex_new(1.0, 0.0));
+    push(mut ref xc, complex::complex_new(2.0, 0.0));
+    push(mut ref xc, complex::complex_new(3.0, 0.0));
+    push(mut ref xc, complex::complex_new(4.0, 0.0));
+    let spectrum: Vec<complex::Complex> = dft(ref xc);
     let pi: f64 = f64_pi();
     let n: i64 = 4;
     let k: i64 = 0;
     while k < n {
         let angle: f64 = 2.0 * pi * (k as f64) / (n as f64);
-        let zk: Complex = complex_from_polar(1.0, angle);
-        let zt: Complex = z_transform_numeric(ref x, zk);
+        let zk: complex::Complex = complex::complex_from_polar(1.0, angle);
+        let zt: complex::Complex = z_transform_numeric(ref x, zk);
         assert close(zt.re, spectrum[k].re);
         assert close(zt.im, spectrum[k].im);
         k = k + 1;
@@ -56,8 +56,8 @@ fn main() -> i64 {
         push(mut ref xvec, exp((0.0 - 2.0) * tt));
         i = i + 1;
     }
-    let s: Complex = complex_new(3.0, 0.0);
-    let lres: Complex = laplace_transform_numeric(ref tvec, ref xvec, s);
+    let s: complex::Complex = complex::complex_new(3.0, 0.0);
+    let lres: complex::Complex = laplace_transform_numeric(ref tvec, ref xvec, s);
     assert abs(lres.re - 0.2) < 1.0e-3;
     assert abs(lres.im) < 1.0e-3;
 
@@ -72,8 +72,8 @@ fn main() -> i64 {
         push(mut ref xvec2, 1.0);
         i = i + 1;
     }
-    let s2: Complex = complex_new(4.0, 0.0);
-    let lres2: Complex = laplace_transform_numeric(ref tvec2, ref xvec2, s2);
+    let s2: complex::Complex = complex::complex_new(4.0, 0.0);
+    let lres2: complex::Complex = laplace_transform_numeric(ref tvec2, ref xvec2, s2);
     assert abs(lres2.re - 0.25) < 1.0e-3;
     assert abs(lres2.im) < 1.0e-3;
 
