@@ -100,10 +100,26 @@
       worst-case. Full suite + `vanic audit-safety` re-verified on both
       backends.
 
+## v0.1.5 (2026-07-27)
+
+- [x] `z_transform_inverse(X_samples, r)` -- recovers a length-n real
+      sequence from n samples of `X(z)` taken evenly around a circle of
+      radius `r` (e.g. produced by calling `z_transform_numeric` at
+      those points). On that circle, the samples are exactly the
+      forward DFT of `y[j] = x[j]*r^(-j)`, so `idft` recovers `y`, and
+      `x[j] = y[j] * r^j` undoes the scaling; `r = 1` is the ordinary
+      IDFT case. `#[bounded_stack(bytes = 512)]`, `vanic check`'s exact
+      reported worst-case (chain through `idft`). Added `pow` to the
+      module header's known-builtins list (first use in this file).
+- [x] `tests/test_transforms.vani` extended with a composed round-trip
+      check: sample `X(z)` via `z_transform_numeric`, then recover the
+      original sequence via `z_transform_inverse`, for both `r=1` (unit
+      circle) and `r=2` (exercises the `r^n` rescaling). Full suite +
+      `vanic audit-safety` re-verified on both backends.
+
 ## Future
 
 No v0.2.0 is currently planned. Candidates if a concrete need shows up:
 higher-radix or mixed-radix FFT (currently radix-2 only, so non-power-of-2
-lengths fall back to O(n^2) `dft`), an FFT-based `conv_circular`/`conv_linear`
-fast path for large inputs, and inverse Z-transform (currently
-forward-evaluation only).
+lengths fall back to O(n^2) `dft`), and an FFT-based
+`conv_circular`/`conv_linear` fast path for large inputs.

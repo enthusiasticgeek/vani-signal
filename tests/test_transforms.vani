@@ -42,6 +42,43 @@ fn main() -> i64 {
         k = k + 1;
     }
 
+    // Composed round-trip check: sample X(z) = z_transform_numeric(x, .)
+    // on a circle of radius r, then z_transform_inverse must recover x
+    // exactly (up to floating error) -- both the unit-circle case (r=1,
+    // the ordinary IDFT) and a non-trivial radius (r=2, exercising the
+    // r^n rescaling).
+    let r1: f64 = 1.0;
+    let samples1: Vec<complex::Complex> = vec();
+    k = 0;
+    while k < n {
+        let angle1: f64 = 2.0 * pi * (k as f64) / (n as f64);
+        let zk1: complex::Complex = complex::complex_from_polar(r1, angle1);
+        push(mut ref samples1, z_transform_numeric(ref x, zk1));
+        k = k + 1;
+    }
+    let recovered1: Vec<f64> = z_transform_inverse(ref samples1, r1);
+    k = 0;
+    while k < n {
+        assert close(recovered1[k], x[k]);
+        k = k + 1;
+    }
+
+    let r2: f64 = 2.0;
+    let samples2: Vec<complex::Complex> = vec();
+    k = 0;
+    while k < n {
+        let angle2: f64 = 2.0 * pi * (k as f64) / (n as f64);
+        let zk2: complex::Complex = complex::complex_from_polar(r2, angle2);
+        push(mut ref samples2, z_transform_numeric(ref x, zk2));
+        k = k + 1;
+    }
+    let recovered2: Vec<f64> = z_transform_inverse(ref samples2, r2);
+    k = 0;
+    while k < n {
+        assert close(recovered2[k], x[k]);
+        k = k + 1;
+    }
+
     // laplace_transform_numeric of e^(-2t), finely sampled on [0, 20], at
     // s=3 should approximate the textbook closed form 1/(s+2) = 0.2. Finite
     // upper limit + trapezoidal rule -> loose tolerance.

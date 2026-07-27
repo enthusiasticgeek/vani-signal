@@ -2,7 +2,7 @@
 //
 // IMPORTANT — do NOT reimplement vāṇी compiler builtins.
 // Already available as builtins (call directly, never redeclare here):
-//   sin cos tan exp log sqrt abs atan2  f64_pi()  f64_hypot(x, y)
+//   sin cos tan exp log sqrt abs atan2 pow  f64_pi()  f64_hypot(x, y)
 //   push pop len set vec
 //
 // Depends on vani-complex (complex::Complex, complex_* arithmetic/polar/exp) for every
@@ -547,4 +547,27 @@ fn z_transform_numeric(x: ref Vec<f64>, z: complex::Complex) -> complex::Complex
         i = i + 1;
     }
     return acc;
+}
+
+// Numeric inverse Z-transform: recovers the length-n real sequence
+// x[0..n-1] from n samples of X(z) taken evenly around a circle of
+// radius r, i.e. X_samples[k] = X(r * e^(2pi i k / n)) -- e.g. produced
+// by calling z_transform_numeric() at those n points. On that circle,
+// X_samples[k] = sum_j (x[j]*r^(-j)) * e^(-2pi i k j / n) is exactly the
+// forward DFT of y[j] = x[j]*r^(-j), so y = idft(X_samples) recovers
+// y[j], and x[j] = y[j] * r^j undoes the r^(-j) scaling. r = 1 (the unit
+// circle) is the ordinary IDFT case. O(n^2), same as idft(). The tiny
+// imaginary residue idft leaves on a real sequence (floating-point
+// rounding) is discarded.
+#[bounded_stack(bytes = 512)]
+fn z_transform_inverse(X_samples: ref Vec<complex::Complex>, r: f64) -> Vec<f64> {
+    let y: Vec<complex::Complex> = idft(X_samples);
+    let n: i64 = len(ref y) as i64;
+    let out: Vec<f64> = vec();
+    let i: i64 = 0;
+    while i < n {
+        push(mut ref out, y[i].re * pow(r, i as f64));
+        i = i + 1;
+    }
+    return out;
 }
