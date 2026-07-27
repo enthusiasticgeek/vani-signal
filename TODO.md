@@ -80,10 +80,30 @@
 
 ---
 
+## v0.1.4 (2026-07-27)
+
+- [x] `window_bartlett(n)` -- triangular window, `1 - |2i/(n-1) - 1|`.
+- [x] `window_kaiser(n, beta)` -- `I0(beta*sqrt(1-(2i/(n-1)-1)^2)) /
+      I0(beta)`, via a new private `_bessel_i0` helper (power-series
+      evaluation of the zeroth-order modified Bessel function, capped at
+      100 iterations with early-exit on convergence -- same pattern as
+      `vani-probability`'s `_gamma_reg_series`).
+- [x] `window_tukey(n, alpha)` -- tapered-cosine window; `alpha=0` is
+      rectangular, `alpha=1` is equivalent to `window_hann` (both checked
+      directly in the new test).
+- [x] `tests/test_convolution_windows.vani` extended: Bartlett's
+      hand-computed triangular shape at n=5; Kaiser (beta=2.0, n=5)
+      against reference values from the same I0-series formula evaluated
+      in Python; Tukey (alpha=0.5, n=5)'s flat-top/tapered-zero shape,
+      plus the alpha=0/alpha=1 identities. `#[bounded_stack(bytes=N)]`
+      on all four new functions is `vanic check`'s exact reported
+      worst-case. Full suite + `vanic audit-safety` re-verified on both
+      backends.
+
 ## Future
 
 No v0.2.0 is currently planned. Candidates if a concrete need shows up:
 higher-radix or mixed-radix FFT (currently radix-2 only, so non-power-of-2
 lengths fall back to O(n^2) `dft`), an FFT-based `conv_circular`/`conv_linear`
-fast path for large inputs, inverse Z-transform (currently forward-evaluation
-only), and Bartlett/Kaiser/Tukey windows.
+fast path for large inputs, and inverse Z-transform (currently
+forward-evaluation only).

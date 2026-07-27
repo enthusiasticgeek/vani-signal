@@ -77,6 +77,47 @@ fn main() -> i64 {
     assert close(wb[0], 0.0);
     assert close(wb[4], 0.0);
 
+    // Bartlett (triangular): 1 - |2i/(n-1) - 1|, hand-computed for n=5.
+    let wbt: Vec<f64> = window_bartlett(5);
+    assert close(wbt[0], 0.0);
+    assert close(wbt[1], 0.5);
+    assert close(wbt[2], 1.0);
+    assert close(wbt[3], 0.5);
+    assert close(wbt[4], 0.0);
+
+    // Kaiser (beta=2.0, n=5): symmetric, peak 1.0 at center. Reference
+    // values from the same I0-series formula evaluated in Python.
+    let wk: Vec<f64> = window_kaiser(5, 2.0);
+    assert close(wk[0], 0.4386762798370488);
+    assert close(wk[1], 0.8347614334011668);
+    assert close(wk[2], 1.0);
+    assert close(wk[3], 0.8347614334011668);
+    assert close(wk[4], 0.4386762798370488);
+
+    // Tukey (alpha=0.5, n=5): hand-computed -- flat top (v=1) at the 3
+    // interior/boundary points x in {0.25, 0.5, 0.75}, tapering to 0 at
+    // both ends.
+    let wt: Vec<f64> = window_tukey(5, 0.5);
+    assert close(wt[0], 0.0);
+    assert close(wt[1], 1.0);
+    assert close(wt[2], 1.0);
+    assert close(wt[3], 1.0);
+    assert close(wt[4], 0.0);
+
+    // Tukey alpha=0 is rectangular; alpha=1 matches window_hann exactly.
+    let wt0: Vec<f64> = window_tukey(5, 0.0);
+    i = 0;
+    while i < 5 {
+        assert close(wt0[i], 1.0);
+        i = i + 1;
+    }
+    let wt1: Vec<f64> = window_tukey(5, 1.0);
+    i = 0;
+    while i < 5 {
+        assert close(wt1[i], wh[i]);
+        i = i + 1;
+    }
+
     // apply_window: elementwise multiply.
     let sig2: Vec<f64> = vec();
     push(mut ref sig2, 2.0); push(mut ref sig2, 2.0); push(mut ref sig2, 2.0);

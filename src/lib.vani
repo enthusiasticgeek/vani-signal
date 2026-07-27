@@ -409,6 +409,89 @@ fn window_blackman(n: i64) -> Vec<f64> {
     return out;
 }
 
+// Bartlett (triangular) window: 1 - |2i/(n-1) - 1|. Zero at both
+// endpoints (the standard Bartlett definition; distinct from a plain
+// triangular window, which is nonzero at the endpoints). O(n).
+#[bounded_stack(bytes = 120)]
+fn window_bartlett(n: i64) -> Vec<f64> {
+    let out: Vec<f64> = vec();
+    let denom: f64 = (n as f64) - 1.0;
+    let i: i64 = 0;
+    while i < n {
+        let v: f64 = 1.0 - abs(2.0 * (i as f64) / denom - 1.0);
+        push(mut ref out, v);
+        i = i + 1;
+    }
+    return out;
+}
+
+// Zeroth-order modified Bessel function of the first kind, via its power
+// series: I0(x) = sum_{k=0}^inf (x/2)^(2k) / (k!)^2. Converges quickly for
+// the beta values window_kaiser actually uses (beta <= ~20); capped at
+// 100 iterations, same "while k < N convergence loop" pattern as
+// vani-probability's _gamma_reg_series (unbounded to the checker's WCET
+// model for the same reason -- no #[wcet] here).
+#[bounded_stack(bytes = 104)]
+fn _bessel_i0(x: f64) -> f64 {
+    let half_sq: f64 = (x / 2.0) * (x / 2.0);
+    let term: f64 = 1.0;
+    let sum: f64 = 1.0;
+    let k: i64 = 1;
+    while k < 100 {
+        term = term * half_sq / ((k as f64) * (k as f64));
+        sum = sum + term;
+        if term < sum * 1.0e-15 { break; }
+        k = k + 1;
+    }
+    return sum;
+}
+
+// Kaiser window: I0(beta*sqrt(1 - (2i/(n-1) - 1)^2)) / I0(beta), for
+// i = 0..n-1. beta trades main-lobe width against side-lobe level
+// (beta=0 is rectangular; larger beta narrows side lobes at the cost of
+// a wider main lobe). O(n) Bessel-series evaluations.
+#[bounded_stack(bytes = 248)]
+fn window_kaiser(n: i64, beta: f64) -> Vec<f64> {
+    let out: Vec<f64> = vec();
+    let denom: f64 = (n as f64) - 1.0;
+    let i0_beta: f64 = _bessel_i0(beta);
+    let i: i64 = 0;
+    while i < n {
+        let r: f64 = 2.0 * (i as f64) / denom - 1.0;
+        let arg: f64 = beta * sqrt(1.0 - r * r);
+        push(mut ref out, _bessel_i0(arg) / i0_beta);
+        i = i + 1;
+    }
+    return out;
+}
+
+// Tukey (tapered cosine) window: a flat top with raised-cosine tapers of
+// width alpha/2 (as a fraction of the window) on each side. alpha=0 is
+// rectangular; alpha=1 is equivalent to window_hann. alpha is not
+// clamped to [0,1] -- same "caller's responsibility" convention as the
+// other windows' unguarded n=1 division. O(n).
+#[bounded_stack(bytes = 168)]
+fn window_tukey(n: i64, alpha: f64) -> Vec<f64> {
+    let out: Vec<f64> = vec();
+    let pi: f64 = f64_pi();
+    let denom: f64 = (n as f64) - 1.0;
+    let half_alpha: f64 = alpha / 2.0;
+    let i: i64 = 0;
+    while i < n {
+        let x: f64 = (i as f64) / denom;
+        let v: f64 = 1.0;
+        if x < half_alpha {
+            v = 0.5 * (1.0 + cos(pi * (x / half_alpha - 1.0)));
+        }
+        if x > 1.0 - half_alpha {
+            v = 0.5 * (1.0 + cos(pi * (x / half_alpha - 2.0 / alpha + 1.0)));
+        }
+        push(mut ref out, v);
+        i = i + 1;
+    }
+    return out;
+}
+
 // Elementwise multiply a signal by a window (same length assumed). O(n).
 #[bounded_stack(bytes = 120)]
 fn apply_window(x: ref Vec<f64>, w: ref Vec<f64>) -> Vec<f64> {
