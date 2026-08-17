@@ -1,6 +1,6 @@
 # vani-signal
 
-Digital signal processing library for the [vāṇी compiler](https://github.com/enthusiasticgeek/vani-compiler).
+Digital signal processing library for the [vāṇī compiler](https://github.com/enthusiasticgeek/vani-compiler).
 
 Depends on [vani-complex](https://github.com/enthusiasticgeek/vani-complex) for
 `Complex` arithmetic -- every frequency-domain function takes or returns
@@ -48,7 +48,7 @@ tests validate `fft`).
 
 ## What this library does NOT provide
 
-These are already vāṇी compiler builtins — call them directly, no import needed:
+These are already vāṇī compiler builtins — call them directly, no import needed:
 
 `sin` `cos` `tan` `exp` `log` `sqrt` `abs` `atan2` `f64_pi()` `f64_hypot`
 `push` `pop` `len` `set` `vec`

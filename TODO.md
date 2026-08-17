@@ -74,7 +74,7 @@
       scopes of the same function -- one inside an early-return `if` block,
       one after it -- causes an LLVM backend codegen collision
       (`multiple definition of local value named 'out.addr'`) even though
-      the scopes never execute together. Not a vāṇी language bug per se, but
+      the scopes never execute together. Not a vāṇī language bug per se, but
       worth remembering: give locals in sibling/successive blocks distinct
       names rather than relying on scoping alone.
 

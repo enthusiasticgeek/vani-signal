@@ -1,6 +1,6 @@
 // vani-signal  v0.1.0 — digital signal processing library
 //
-// IMPORTANT — do NOT reimplement vāṇी compiler builtins.
+// IMPORTANT — do NOT reimplement vāṇī compiler builtins.
 // Already available as builtins (call directly, never redeclare here):
 //   sin cos tan exp log sqrt abs atan2 pow  f64_pi()  f64_hypot(x, y)
 //   push pop len set vec
