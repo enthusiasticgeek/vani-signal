@@ -6,6 +6,8 @@ Depends on [vani-complex](https://github.com/enthusiasticgeek/vani-complex) for
 `Complex` arithmetic -- every frequency-domain function takes or returns
 `Vec<Complex>`. Time/sample-domain data is plain `Vec<f64>`.
 
+**API reference / tutorial:** <https://enthusiasticgeek.github.io/vani-signal/>
+
 ## Add to your project
 
 ```toml
